@@ -13,10 +13,22 @@ export class OllamaService {
         stream: false
       });
 
-      return response.data.response || 'Error generating response';
+      return this.extractJson(response.data.response) || 'Error generating response';
     } catch (error) {
       console.error('Error querying Ollama:', error);
       return 'Error querying AI';
+    }
+  }
+  extractJson(message: string){
+    // Remove triple backticks and 'json' label
+    const cleanedMessage = message.replace(/```json|```/g, '').trim();
+ 
+    // Parse as JSON
+    try {
+        return JSON.parse(cleanedMessage);
+    } catch (error) {
+        console.error("Invalid JSON:", error);
+        return null;
     }
   }
 }
