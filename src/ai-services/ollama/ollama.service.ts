@@ -5,7 +5,7 @@ import axios from 'axios';
 export class OllamaService {
   private readonly ollamaBaseUrl = 'http://localhost:11434/api/generate'; // Ollama's local endpoint
 
-  async queryOllama(prompt: string): Promise<string> {
+  async queryOllama(prompt: string): Promise<any> {
     try {
       const response = await axios.post(this.ollamaBaseUrl, {
         model: 'phi4:latest', // Change to the model you installed in Ollama

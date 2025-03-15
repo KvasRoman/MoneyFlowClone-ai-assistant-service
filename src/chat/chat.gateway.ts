@@ -12,30 +12,32 @@ import { OllamaService } from '../ai-services/ollama/ollama.service';
 import { transactionPrompt } from 'src/ai-services/prompt';
 import * as cookie from 'cookie';
 import { Logger } from '@nestjs/common';
+import { ChatService } from './chat.service';
+import { AuthService } from 'src/command/services/auth.service';
+import { DynamicCommand } from 'src/command/dynamicCommand';
 @WebSocketGateway() // Allow cross-origin for frontend
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+
+
     @WebSocketServer()
     server: Server;
-    constructor(private readonly ollamaService: OllamaService) { }
-
-    getAccessToken(client: Socket): string | null {
-        const accessToken = client.handshake.headers['authorization'] || '';
-        return accessToken
-    }
-    getRefreshToken(client: Socket): string | null {
-        const cookies = cookie.parse(client.handshake.headers.cookie || '');
-        const refreshToken = cookies['refreshToken'];
-        return refreshToken || null;
-    }
-
-    handleConnection(client: Socket) {
-        const accessToken = this.getAccessToken(client);
-        const refreshToken = this.getRefreshToken(client);
+    constructor(
+        private readonly ollamaService: OllamaService,
+        private readonly chatService: ChatService,
+        private readonly authService: AuthService
+    ) {}
 
 
+    async handleConnection(client: Socket) {
+        
 
-        console.log('Access Token:', accessToken);
-        console.log('Refresh Token:', refreshToken);
+        client.data.tokens = this.chatService.getTokens(client);
+
+        const account = await this.authService.validate(client.data.tokens);
+        client.data.account = account;
+        Logger.log(account);
+        console.log('Access Token:', client.data.tokens.accessToken);
+        console.log('Refresh Token:', client.data.tokens.refreshToken);
         console.log(`Client connected: ${client.id}`);
     }
 
@@ -51,9 +53,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log(`Received message from ${data.user}: ${data.message}`);
 
         // Get AI response from Ollama
-        const response = await this.ollamaService.queryOllama(transactionPrompt(data.message));
-
+        const response: DynamicCommand = await this.ollamaService.queryOllama(transactionPrompt(data.message));
+        response.payload.transactionDate = new Date();
+        response.payload.accountId = client.data.account.id;
         Logger.log(response);
+        this.chatService.executeCommand(response);
         // Emit AI response back to the client
         this.server.emit('newMessage', { user: 'Ollama', message: response });
     }
