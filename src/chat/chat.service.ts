@@ -9,11 +9,12 @@ import { CommandService } from "src/command/command.service";
 export class ChatService {
   constructor(private readonly commandService: CommandService) {}
     private getAccessToken(client: Socket): string | null {
-        const accessToken = client.handshake.headers['authorization'] || '';
+        const accessToken = client.handshake.auth.token || '';
         return accessToken
     }
     private getRefreshToken(client: Socket): string | null {
         const cookies = cookie.parse(client.handshake.headers.cookie || '');
+        console.log(cookies);
         const refreshToken = cookies['refreshToken'];
         return refreshToken || null;
     }

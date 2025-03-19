@@ -15,7 +15,7 @@ import { Logger } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { AuthService } from 'src/command/services/auth.service';
 import { DynamicCommand } from 'src/command/dynamicCommand';
-@WebSocketGateway() // Allow cross-origin for frontend
+@WebSocketGateway({cors: {origin: "*", credentials: true}, transports: ['websocket']}) // Allow cross-origin for frontend
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 
@@ -29,16 +29,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
 
     async handleConnection(client: Socket) {
+        try{
+            client.data.tokens = this.chatService.getTokens(client);
+
+            Logger.log(client.handshake, "client headers");
+            console.log('Access Token:', client.data.tokens.accessToken);
+            console.log('Refresh Token:', client.data.tokens.refreshToken);
+            console.log(`Client connected: ${client.id}`);
+            const account = await this.authService.validate(client.data.tokens);
+            client.data.account = account;
+            Logger.log(account);
+        }
+        catch(e){
+            Logger.error(e, "error");
+            client.disconnect();
+        }
         
-
-        client.data.tokens = this.chatService.getTokens(client);
-
-        const account = await this.authService.validate(client.data.tokens);
-        client.data.account = account;
-        Logger.log(account);
-        console.log('Access Token:', client.data.tokens.accessToken);
-        console.log('Refresh Token:', client.data.tokens.refreshToken);
-        console.log(`Client connected: ${client.id}`);
     }
 
     handleDisconnect(client: Socket) {
