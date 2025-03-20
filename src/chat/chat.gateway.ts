@@ -60,6 +60,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // Get AI response from Ollama
         const response: DynamicCommand = await this.ollamaService.queryOllama(transactionPrompt(data.message));
+        Logger.log(response, response)
         response.payload.transactionDate = new Date();
         response.payload.accountId = client.data.account.id;
         Logger.log(response);
